@@ -1,0 +1,36 @@
+#!/bin/bash
+
+touch .env
+
+if [ -n "$ACCESS_PASSWORD" ]; then
+  echo "ACCESS_PASSWORD=${ACCESS_PASSWORD}" >> .env
+  echo "NEXT_PUBLIC_ACCESS_PASSWORD=${ACCESS_PASSWORD}" >> .env
+fi
+
+if [ -n "$OPENAI_COMPATIBLE_API_KEY" ]; then
+  echo "OPENAI_COMPATIBLE_API_KEY=${OPENAI_COMPATIBLE_API_KEY}" >> .env
+  echo "NEXT_PUBLIC_OPENAI_COMPATIBLE_API_KEY=${OPENAI_COMPATIBLE_API_KEY}" >> .env
+fi
+
+if [ -n "$OPENAI_COMPATIBLE_API_BASE_URL" ]; then
+  echo "OPENAI_COMPATIBLE_API_BASE_URL=${OPENAI_COMPATIBLE_API_BASE_URL}" >> .env
+  echo "NEXT_PUBLIC_OPENAI_COMPATIBLE_API_BASE_URL=${OPENAI_COMPATIBLE_API_BASE_URL}" >> .env
+fi
+
+if [ -n "$TAVILY_API_KEY" ]; then
+  echo "TAVILY_API_KEY=${TAVILY_API_KEY}" >> .env
+  echo "NEXT_PUBLIC_TAVILY_API_KEY=${TAVILY_API_KEY}" >> .env
+fi
+
+if [ -n "$SEARXNG_API_BASE_URL" ]; then
+  echo "SEARXNG_API_BASE_URL=${SEARXNG_API_BASE_URL}" >> .env
+  echo "NEXT_PUBLIC_SEARXNG_API_BASE_URL=${SEARXNG_API_BASE_URL}" >> .env
+fi
+
+if [ -n "$MCP_AI_PROVIDER" ]; then
+  echo "MCP_AI_PROVIDER=${MCP_AI_PROVIDER}" >> .env
+  echo "NEXT_PUBLIC_MCP_AI_PROVIDER=${MCP_AI_PROVIDER}" >> .env
+fi
+
+# debug
+cat .env

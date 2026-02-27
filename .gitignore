@@ -1,0 +1,12 @@
+node_modules
+.next
+out
+build
+dist
+*.log
+.env
+.env.local
+build_logs.txt
+run_logs.txt
+upload_log.txt
+test_api.txt
