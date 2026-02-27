@@ -1,0 +1,11 @@
+GET /: 200
+--- Testing SSE Auth Variations ---
+Header 'No Auth': 403
+Header 'Bearer Token': 500
+Header 'Token Only': 403
+Header 'X-API-KEY': 403
+Header 'x-api-key': 403
+Header 'api-key': 403
+Header 'Cookie': 403
+Query Param 'token': 403
+Query Param 'key': 403
