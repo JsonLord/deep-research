@@ -55,6 +55,20 @@ export async function GET(req: NextRequest) {
 
   console.log(`[SSE-LIVE][${requestId}] Query: ${query}, Provider: ${provider}, TaskModel: ${taskModel}, Search: ${searchProvider}`);
 
+  if (!query || !provider || !thinkingModel || !taskModel || !searchProvider) {
+    const missing = [];
+    if (!query) missing.push("query");
+    if (!provider) missing.push("provider");
+    if (!thinkingModel) missing.push("thinkingModel");
+    if (!taskModel) missing.push("taskModel");
+    if (!searchProvider) missing.push("searchProvider");
+
+    return NextResponse.json(
+      { error: `Missing required parameters: ${missing.join(", ")}` },
+      { status: 400 }
+    );
+  }
+
   const encoder = new TextEncoder();
   const readableStream = new ReadableStream({
     start: async (controller) => {

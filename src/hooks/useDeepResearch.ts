@@ -55,7 +55,7 @@ function smoothTextStream(type: "character" | "word" | "line") {
 }
 
 function handleError(error: unknown) {
-  console.log(error);
+  console.error("DeepResearch execution error:", error);
   const errorMessage = parseError(error);
   toast.error(errorMessage);
 }
@@ -207,24 +207,38 @@ function useDeepResearch() {
     const { question } = useTaskStore.getState();
     const { thinkingModel } = getModel();
     setStatus(t("research.common.thinking"));
+    console.log(`[askQuestions] Starting with question: "${question.substring(0, 50)}...", model: ${thinkingModel}`);
     const thinkTagStreamProcessor = new ThinkTagStreamProcessor();
     const promptOverrides = getPromptOverrides();
-    const searchSettings = await generateSearchSettings(thinkingModel);
-    const result = streamText({
+
+    let searchSettings;
+    try {
+      searchSettings = await generateSearchSettings(thinkingModel);
+      console.log(`[askQuestions] Generated search settings successfully`);
+    } catch (err) {
+      console.error(`[askQuestions] Failed to generate search settings:`, err);
+      throw err;
+    }
+
+    try {
+      console.log(`[askQuestions] Initiating streamText call...`);
+      const result = streamText({
       ...searchSettings,
       system: getSystemPrompt(promptOverrides),
       prompt: [
         generateQuestionsPrompt(question, promptOverrides),
         getResponseLanguagePrompt(),
       ].join("\n\n"),
-      experimental_transform: smoothTextStream(smoothTextStreamType),
-      onError: handleError,
-    });
-    let content = "";
-    let reasoning = "";
-    taskStore.setQuestion(question);
-    for await (const part of result.fullStream) {
-      if (part.type === "text-delta") {
+        experimental_transform: smoothTextStream(smoothTextStreamType),
+        onError: handleError,
+      });
+      let content = "";
+      let reasoning = "";
+      taskStore.setQuestion(question);
+
+      console.log(`[askQuestions] Awaiting stream parts...`);
+      for await (const part of result.fullStream) {
+        if (part.type === "text-delta") {
         thinkTagStreamProcessor.processChunk(
           part.textDelta,
           (data) => {
@@ -236,10 +250,15 @@ function useDeepResearch() {
           }
         );
       } else if (part.type === "reasoning") {
-        reasoning += part.textDelta;
+          reasoning += part.textDelta;
+        }
       }
+      console.log(`[askQuestions] Stream completed.`);
+      if (reasoning) console.log(`[askQuestions] Reasoning length: ${reasoning.length}`);
+    } catch (err) {
+      console.error(`[askQuestions] Error during stream processing:`, err);
+      throw err;
     }
-    if (reasoning) console.log(reasoning);
   }
 
   async function writeReportPlan() {
@@ -338,6 +357,14 @@ function useDeepResearch() {
     return content;
   }
 
+  const [abortController, setAbortController] = useState<AbortController | null>(null);
+
+  const abortResearch = () => {
+    if (abortController) {
+      abortController.abort();
+    }
+  };
+
   async function runSearchTask(queries: SearchTask[]) {
     const {
       enableSearch,
@@ -351,10 +378,20 @@ function useDeepResearch() {
     const promptOverrides = getPromptOverrides();
     setStatus(t("research.common.research"));
     const plimit = Plimit(parallelSearch);
+    const controller = new AbortController();
+    setAbortController(controller);
+
+    let completedCount = 0;
+    let timeoutId: NodeJS.Timeout | null = null;
+
     const thinkTagStreamProcessor = new ThinkTagStreamProcessor();
     await Promise.all(
       queries.map((item) => {
-        plimit(async () => {
+        return plimit(async () => {
+          if (controller.signal.aborted) {
+            taskStore.updateTask(item.query, { state: "failed", learning: "Aborted by user or timeout" });
+            return "";
+          }
           let content = "";
           let reasoning = "";
           let searchResult;
@@ -381,6 +418,12 @@ function useDeepResearch() {
                 sources,
                 images,
               });
+              completedCount++;
+              if (completedCount / queries.length >= 0.8 && !timeoutId) {
+                timeoutId = setTimeout(() => {
+                  controller.abort();
+                }, 600000);
+              }
               return content;
             } else {
               content += "\n\n---\n\n";
@@ -422,6 +465,7 @@ function useDeepResearch() {
                   getResponseLanguagePrompt(),
                 ].join("\n\n"),
                 experimental_transform: smoothTextStream(smoothTextStreamType),
+                abortSignal: controller.signal,
                 onError: handleError,
               });
             } else {
@@ -440,6 +484,7 @@ function useDeepResearch() {
                   getResponseLanguagePrompt(),
                 ].join("\n\n"),
                 experimental_transform: smoothTextStream(smoothTextStreamType),
+                abortSignal: controller.signal,
                 onError: handleError,
               });
             }
@@ -456,13 +501,15 @@ function useDeepResearch() {
                 getResponseLanguagePrompt(),
               ].join("\n\n"),
               experimental_transform: smoothTextStream(smoothTextStreamType),
+              abortSignal: controller.signal,
               onError: (err) => {
                 taskStore.updateTask(item.query, { state: "failed" });
                 handleError(err);
               },
             });
           }
-          for await (const part of searchResult.fullStream) {
+          try {
+            for await (const part of searchResult.fullStream) {
             if (part.type === "text-delta") {
               thinkTagStreamProcessor.processChunk(
                 part.textDelta,
@@ -498,10 +545,17 @@ function useDeepResearch() {
                     }
                   );
                 }
-              } else if (part.providerMetadata?.openai) {
-                // Fixed the problem that OpenAI cannot generate markdown reference link syntax properly in Chinese context
-                content = content.replaceAll("【", "[").replaceAll("】", "]");
+                } else if (part.providerMetadata?.openai) {
+                  // Fixed the problem that OpenAI cannot generate markdown reference link syntax properly in Chinese context
+                  content = content.replaceAll("【", "[").replaceAll("】", "]");
+                }
               }
+            }
+          } catch (err: any) {
+            if (err.name === 'AbortError') {
+              console.log(`[runSearchTask] Aborted query: ${item.query}`);
+            } else {
+              throw err;
             }
           }
           if (reasoning) console.log(reasoning);
@@ -519,6 +573,13 @@ function useDeepResearch() {
                 .join("\n");
           }
 
+          completedCount++;
+          if (completedCount / queries.length >= 0.8 && !timeoutId) {
+            timeoutId = setTimeout(() => {
+              controller.abort();
+            }, 600000);
+          }
+
           if (content.length > 0) {
             taskStore.updateTask(item.query, {
               state: "completed",
@@ -530,7 +591,7 @@ function useDeepResearch() {
           } else {
             taskStore.updateTask(item.query, {
               state: "failed",
-              learning: "",
+              learning: "Aborted or failed",
               sources: [],
               images: [],
             });
@@ -539,6 +600,8 @@ function useDeepResearch() {
         });
       })
     );
+    if (timeoutId) clearTimeout(timeoutId);
+    setAbortController(null);
   }
 
   async function reviewSearchResult() {
@@ -604,6 +667,14 @@ function useDeepResearch() {
       return queries.length;
     }
     return 0;
+  }
+
+  async function forceFinishAndWriteReport() {
+    abortResearch();
+    // Use setTimeout to allow state to settle before initiating write
+    setTimeout(() => {
+      writeFinalReport();
+    }, 500);
   }
 
   async function writeFinalReport() {
@@ -851,6 +922,8 @@ function useDeepResearch() {
     runSearchTask,
     reviewSearchResult,
     writeFinalReport,
+    abortResearch,
+    forceFinishAndWriteReport,
   };
 }
 

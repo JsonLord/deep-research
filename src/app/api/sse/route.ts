@@ -43,6 +43,20 @@ export async function POST(req: NextRequest) {
 
     console.log(`[${requestId}] [SSE] Query: "${query}", Provider: ${provider}, Model: ${thinkingModel}`);
 
+    if (!query || !provider || !thinkingModel || !taskModel || !searchProvider) {
+      const missing = [];
+      if (!query) missing.push("query");
+      if (!provider) missing.push("provider");
+      if (!thinkingModel) missing.push("thinkingModel");
+      if (!taskModel) missing.push("taskModel");
+      if (!searchProvider) missing.push("searchProvider");
+
+      return NextResponse.json(
+        { error: `Missing required parameters: ${missing.join(", ")}` },
+        { status: 400 }
+      );
+    }
+
     let parsedPromptOverrides = {};
     try {
       parsedPromptOverrides = parseDeepResearchPromptOverrides(promptOverrides);

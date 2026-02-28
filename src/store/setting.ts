@@ -98,7 +98,7 @@ interface SettingActions {
 
 export const defaultValues: SettingStore = {
   provider: process.env.NEXT_PUBLIC_OPENAI_COMPATIBLE_API_BASE_URL ? "openaicompatible" : "google",
-  mode: process.env.NEXT_PUBLIC_ACCESS_PASSWORD ? "proxy" : "local",
+  mode: "proxy",
   apiKey: "",
   apiProxy: "",
   thinkingModel: "gemini-2.5-pro",

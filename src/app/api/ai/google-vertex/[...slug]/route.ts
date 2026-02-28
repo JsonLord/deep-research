@@ -26,7 +26,8 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ slug: s
     if (req.method.toUpperCase() !== "GET" && req.method.toUpperCase() !== "HEAD") {
       body = await req.clone().json().catch(() => undefined);
     }
-    const searchParams = req.nextUrl.searchParams;
+    const searchParams = new URLSearchParams(req.nextUrl.searchParams);
+    searchParams.delete("slug");
     const paramsStr = searchParams.toString();
 
     const baseUrl = `https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT}/locations/${LOCATION}/publishers/google`;

@@ -92,7 +92,7 @@ function useWebSearch() {
           options.baseURL = tavilyApiProxy;
           options.apiKey = multiApiKeyPolling(tavilyApiKey);
         } else {
-          options.baseURL = "/api/search/tavily";
+          options.baseURL = typeof window !== "undefined" ? `${window.location.origin}/api/search/tavily` : "/api/search/tavily";
         }
         options.scope = tavilyScope;
         break;
@@ -103,7 +103,7 @@ function useWebSearch() {
           options.baseURL = firecrawlApiProxy;
           options.apiKey = multiApiKeyPolling(firecrawlApiKey);
         } else {
-          options.baseURL = "/api/search/firecrawl";
+          options.baseURL = typeof window !== "undefined" ? `${window.location.origin}/api/search/firecrawl` : "/api/search/firecrawl";
         }
         break;
       case "exa":
@@ -112,7 +112,7 @@ function useWebSearch() {
           options.baseURL = exaApiProxy;
           options.apiKey = multiApiKeyPolling(exaApiKey);
         } else {
-          options.baseURL = "/api/search/exa";
+          options.baseURL = typeof window !== "undefined" ? `${window.location.origin}/api/search/exa` : "/api/search/exa";
         }
         options.scope = exaScope;
         break;
@@ -122,7 +122,7 @@ function useWebSearch() {
           options.baseURL = bochaApiProxy;
           options.apiKey = multiApiKeyPolling(bochaApiKey);
         } else {
-          options.baseURL = "/api/search/bocha";
+          options.baseURL = typeof window !== "undefined" ? `${window.location.origin}/api/search/bocha` : "/api/search/bocha";
         }
         break;
       case "brave":
@@ -131,7 +131,7 @@ function useWebSearch() {
           options.baseURL = braveApiProxy;
           options.apiKey = multiApiKeyPolling(braveApiKey);
         } else {
-          options.baseURL = "/api/search/brave";
+          options.baseURL = typeof window !== "undefined" ? `${window.location.origin}/api/search/brave` : "/api/search/brave";
         }
         break;
       case "searxng":
@@ -139,7 +139,7 @@ function useWebSearch() {
         if (mode === "local") {
           options.baseURL = searxngApiProxy;
         } else {
-          options.baseURL = "/api/search/searxng";
+          options.baseURL = typeof window !== "undefined" ? `${window.location.origin}/api/search/searxng` : "/api/search/searxng";
         }
         options.scope = searxngScope;
         break;

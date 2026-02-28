@@ -95,7 +95,7 @@ function TaskState({ state }: { state: SearchTask["state"] }) {
 function SearchResult() {
   const { t } = useTranslation();
   const taskStore = useTaskStore();
-  const { status, runSearchTask, reviewSearchResult } = useDeepResearch();
+  const { status, runSearchTask, reviewSearchResult, abortResearch } = useDeepResearch();
   const { generateId } = useKnowledge();
   const {
     formattedTime,
@@ -108,7 +108,9 @@ function SearchResult() {
   const [taskSort, setTaskSort] = useState<TaskSort>("default");
   const [expandedTaskIds, setExpandedTaskIds] = useState<string[]>([]);
   const unfinishedTasks = useMemo(() => {
-    return taskStore.tasks.filter((item) => item.state !== "completed");
+    return taskStore.tasks.filter(
+      (item) => item.state === "processing" || item.state === "unprocessed"
+    );
   }, [taskStore.tasks]);
   const failedTasks = useMemo(() => {
     return taskStore.tasks.filter((item) => item.state === "failed");
@@ -619,24 +621,39 @@ function SearchResult() {
                   </FormItem>
                 )}
               />
-              <Button
-                className="w-full mt-4"
-                type="submit"
-                variant="default"
-                disabled={isThinking}
-              >
-                {isThinking ? (
-                  <>
-                    <LoaderCircle className="animate-spin" />
-                    <span>{status}</span>
-                    <small className="font-mono">{formattedTime}</small>
-                  </>
-                ) : taskFinished ? (
-                  t("research.common.indepthResearch")
-                ) : (
-                  t("research.common.continueResearch")
+              <div className="flex gap-2 w-full mt-4">
+                <Button
+                  className="flex-1"
+                  type="submit"
+                  variant="default"
+                  disabled={isThinking}
+                >
+                  {isThinking ? (
+                    <>
+                      <LoaderCircle className="animate-spin" />
+                      <span>{status}</span>
+                      <small className="font-mono">{formattedTime}</small>
+                    </>
+                  ) : taskFinished ? (
+                    t("research.common.indepthResearch")
+                  ) : (
+                    t("research.common.continueResearch")
+                  )}
+                </Button>
+                {isThinking && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => {
+                      abortResearch();
+                      setTimeout(() => setIsThinking(false), 500);
+                      toast.message("Research stopped. You can now write the report.");
+                    }}
+                  >
+                    Finish Research
+                  </Button>
                 )}
-              </Button>
+              </div>
             </form>
           </Form>
         </div>

@@ -202,8 +202,13 @@ function useModelProvider() {
 
     if (mode === "proxy") {
       options.apiKey = generateSignature(password, Date.now());
+      // Ensure baseURL is absolute for AI SDK fetch requests in proxy mode
+      if (options.baseURL.startsWith("/") && typeof window !== "undefined") {
+        options.baseURL = `${window.location.origin}${options.baseURL}`;
+      }
     }
 
+    console.log(`[AI Provider] Created provider configuration for mode: ${mode}, provider: ${provider}, model: ${model}, baseURL: ${options.baseURL}`);
     return await createAIProvider(options);
   }
 

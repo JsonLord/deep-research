@@ -72,10 +72,10 @@ function FinalReport() {
     }
   }, [deepResearchPromptOverrides]);
   const taskFinished = useMemo(() => {
-    const unfinishedTasks = taskStore.tasks.filter(
-      (task) => task.state !== "completed"
+    const activeTasks = taskStore.tasks.filter(
+      (task) => task.state === "processing" || task.state === "unprocessed"
     );
-    return taskStore.tasks.length > 0 && unfinishedTasks.length === 0;
+    return taskStore.tasks.length > 0 && activeTasks.length === 0;
   }, [taskStore.tasks]);
 
   const form = useForm<z.infer<typeof formSchema>>({

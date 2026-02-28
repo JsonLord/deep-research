@@ -15,7 +15,8 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ slug: s
     if (req.method.toUpperCase() !== "GET" && req.method.toUpperCase() !== "HEAD") {
       body = await req.clone().json().catch(() => undefined);
     }
-    const searchParams = req.nextUrl.searchParams;
+    const searchParams = new URLSearchParams(req.nextUrl.searchParams);
+    searchParams.delete("slug");
     const paramsStr = searchParams.toString();
 
     if (!API_PROXY_BASE_URL) {
@@ -23,7 +24,13 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ slug: s
       return NextResponse.json({ error: "Base URL not configured" }, { status: 500 });
     }
 
-    let url = `${API_PROXY_BASE_URL}/${decodeURIComponent(path.join("/"))}`;
+    const baseUrl = API_PROXY_BASE_URL.replace(/\/+$/, "");
+    let joinedPath = decodeURIComponent(path.join("/"));
+    const firstSegment = decodeURIComponent(path[0]);
+    if (baseUrl.endsWith(`/${firstSegment}`)) {
+      joinedPath = decodeURIComponent(path.slice(1).join("/"));
+    }
+    let url = `${baseUrl}/${joinedPath}`;
     if (paramsStr) url += `?${paramsStr}`;
 
     console.log(`[${requestId}] [Proxy] [OpenAICompatible] Upstream: ${url}`);
@@ -35,6 +42,9 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ slug: s
     requestHeaders.delete("x-api-key");
     requestHeaders.delete("x-goog-api-key");
     requestHeaders.delete("api-key");
+    requestHeaders.delete("host");
+    requestHeaders.delete("origin");
+    requestHeaders.delete("referer");
 
     if (apiKey) {
       requestHeaders.set("Authorization", `Bearer ${apiKey}`);

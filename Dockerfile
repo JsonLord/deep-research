@@ -8,7 +8,7 @@ ARG TAVILY_API_KEY
 ARG OPENAI_COMPATIBLE_API_BASE_URL
 ARG OPENAI_COMPATIBLE_API_KEY
 
-RUN apt-get update && apt-get install -y git git-lfs && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
 RUN npm install -g pnpm
 
 WORKDIR /app

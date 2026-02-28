@@ -3,8 +3,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Settings, Github, History, BookText, Keyboard } from "lucide-react";
+import { Settings, Github, History, BookText, Keyboard, Bug } from "lucide-react";
 import { Button } from "@/components/Internal/Button";
+import { useDebugStore, initLogInterception } from "@/store/debug";
 import {
   Dialog,
   DialogContent,
@@ -117,6 +118,26 @@ function Header() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [openShortcuts, setOpenShortcuts] = useState<boolean>(false);
   const { setOpenSetting, setOpenHistory, setOpenKnowledge } = useGlobalStore();
+  const { exportLogs } = useDebugStore();
+
+  useEffect(() => {
+    initLogInterception();
+  }, []);
+
+  const handleExportLogs = useCallback(() => {
+    try {
+      const logs = exportLogs();
+      downloadFile(
+        logs,
+        `debug-logs-${new Date().toISOString()}.json`,
+        "application/json;charset=utf-8"
+      );
+      toast.message("Debug logs exported successfully");
+    } catch (error) {
+      console.error("Failed to export logs:", error);
+      toast.error("Failed to export debug logs");
+    }
+  }, [exportLogs]);
 
   const exportSnapshot = useCallback(() => {
     const { backup, title, question } = useTaskStore.getState();
@@ -267,6 +288,15 @@ function Header() {
               <Github className="h-5 w-5" />
             </Button>
           </a>
+          <Button
+            className="h-8 w-8"
+            variant="ghost"
+            size="icon"
+            title="Export Debug Logs"
+            onClick={handleExportLogs}
+          >
+            <Bug className="h-5 w-5" />
+          </Button>
           <Button
             className="h-8 w-8"
             variant="ghost"

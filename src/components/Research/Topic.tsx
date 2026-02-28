@@ -105,6 +105,7 @@ function Topic() {
     if (handleCheck()) {
       const { id, setQuestion } = useTaskStore.getState();
       try {
+        console.log(`[Topic handleSubmit] Start Thinking requested. Topic: "${values.topic.substring(0, 50)}..."`);
         setIsThinking(true);
         accurateTimerStart();
         if (id !== "") {
@@ -112,18 +113,27 @@ function Topic() {
           form.setValue("topic", values.topic);
         }
         setQuestion(values.topic);
+        console.log(`[Topic handleSubmit] Calling askQuestions()`);
         await askQuestions();
+        console.log(`[Topic handleSubmit] askQuestions() completed`);
       } catch (err) {
-        console.error("Submit error:", err);
+        console.error("[Topic handleSubmit] Caught error:", err);
         const { mode } = useSettingStore.getState();
         let message = t("research.common.thinkingError");
-        if (err instanceof Error) {
+
+        const isFetchError = err instanceof TypeError && err.message === "Failed to fetch" || String(err).includes("Failed to fetch");
+
+        if (isFetchError) {
+          if (mode === "local") {
+            message = "Network Error: Failed to fetch. This is likely a CORS issue because the API provider blocks direct browser requests. Please open Settings and switch API Request Mode to 'Server Proxy'.";
+          } else if (mode === "proxy") {
+            message = "Failed to connect to server. Please check your network or refresh the page.";
+          }
+        } else if (err instanceof Error) {
            message += `: ${err.message}`;
         }
-        if (mode === "proxy" && (err instanceof TypeError || String(err).includes("Failed to fetch"))) {
-           message = "Failed to connect to server. Please check your network or refresh the page.";
-        }
-        toast.error(message);
+
+        toast.error(message, { duration: 8000 });
       } finally {
         setIsThinking(false);
         accurateTimerStop();
